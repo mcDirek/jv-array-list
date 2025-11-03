@@ -15,28 +15,23 @@ public class ArrayList<T> implements List<T> {
 
     @Override
     public void add(T value) {
-        ensureCapacity();
+        ensureCapacity(size + 1);
         elements[size++] = value;
     }
 
     @Override
     public void add(T value, int index) {
         checkIndexForAdd(index);
-        ensureCapacity();
-
-        // Зсуваємо елементи вручну
-        for (int i = size; i > index; i--) {
-            elements[i] = elements[i - 1];
-        }
-
+        ensureCapacity(size + 1);
+        shiftRightFrom(index);
         elements[index] = value;
-        size++;
     }
 
     @Override
     public void addAll(List<T> list) {
+        ensureCapacity(size + list.size());
         for (int i = 0; i < list.size(); i++) {
-            add(list.get(i));
+            elements[size++] = list.get(i);
         }
     }
 
@@ -55,27 +50,18 @@ public class ArrayList<T> implements List<T> {
     @Override
     public T remove(int index) {
         checkIndex(index);
-        T removed = elements[index];
-
-        // Зсуваємо елементи вліво вручну
-        for (int i = index; i < size - 1; i++) {
-            elements[i] = elements[i + 1];
-        }
-
-        elements[size - 1] = null; // очищаємо останній елемент
-        size--;
+        final T removed = elements[index];
+        shiftLeftFrom(index);
         return removed;
     }
 
     @Override
     public T remove(T element) {
-        for (int i = 0; i < size; i++) {
-            if ((element == null && elements[i] == null)
-                    || (element != null && element.equals(elements[i]))) {
-                return remove(i);
-            }
+        int idx = indexOf(element);
+        if (idx == -1) {
+            throw new NoSuchElementException("No such element: " + element);
         }
-        throw new NoSuchElementException("No such element: " + element);
+        return remove(idx);
     }
 
     @Override
@@ -88,36 +74,62 @@ public class ArrayList<T> implements List<T> {
         return size == 0;
     }
 
-    // ---------- Приватні допоміжні методи ----------
+    private int indexOf(T element) {
+        for (int i = 0; i < size; i++) {
+            if ((element == null && elements[i] == null)
+                    || (element != null && element.equals(elements[i]))) {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     private void checkIndex(int index) {
         if (index < 0 || index >= size) {
-            throw new ArrayListIndexOutOfBoundsException("Index " + index + " is out of bounds");
+            throw new ArrayListIndexOutOfBoundsException(
+                    "Index " + index + " is out of bounds (size=" + size + ")"
+            );
         }
     }
 
     private void checkIndexForAdd(int index) {
         if (index < 0 || index > size) {
-            throw new ArrayListIndexOutOfBoundsException("Index " + index + " is out of bounds for add()");
+            throw new ArrayListIndexOutOfBoundsException(
+                    "Index " + index + " is out of bounds for add (size=" + size + ")"
+            );
         }
     }
 
     @SuppressWarnings("unchecked")
-    private void ensureCapacity() {
-        if (size == elements.length) {
-            int newCapacity = (int) (elements.length * 1.5);
-            if (newCapacity == elements.length) {
-                newCapacity++; // гарантія, що збільшиться хоча б на 1
-            }
-
-            T[] newArray = (T[]) new Object[newCapacity];
-
-            // копіюємо вручну всі елементи
-            for (int i = 0; i < size; i++) {
-                newArray[i] = elements[i];
-            }
-
-            elements = newArray;
+    private void ensureCapacity(int minCapacity) {
+        if (minCapacity <= elements.length) {
+            return;
         }
+        int newCapacity = (int) (elements.length * 1.5);
+        if (newCapacity < minCapacity) {
+            newCapacity = minCapacity;
+        }
+        if (newCapacity == elements.length) {
+            newCapacity++;
+        }
+        T[] newArr = (T[]) new Object[newCapacity];
+        for (int i = 0; i < size; i++) {
+            newArr[i] = elements[i];
+        }
+        elements = newArr;
+    }
+
+    private void shiftRightFrom(int index) {
+        for (int i = size; i > index; i--) {
+            elements[i] = elements[i - 1];
+        }
+        size++;
+    }
+
+    private void shiftLeftFrom(int index) {
+        for (int i = index; i < size - 1; i++) {
+            elements[i] = elements[i + 1];
+        }
+        elements[--size] = null;
     }
 }
